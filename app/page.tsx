@@ -1,17 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { client } from "./lib/sanity";
 import Header from "./components/Header";
 import Content from "./components/content";
 import HoverableCategory from "./components/Hoverable";
 
-// ✅ Fetch posts
-async function getPosts() {
+// ✅ Define TypeScript Interfaces
+interface Category {
+  _id: string;
+  title: string;
+}
+
+interface Post {
+  _id: string;
+  title: string;
+  slug: { current: string };
+  publishedAt: string;
+  mainImage?: { asset?: { url?: string } };
+  category?: { _id?: string; title?: string };
+}
+
+interface CategorizedPosts {
+  [categoryTitle: string]: Post[];
+}
+
+// ✅ Fetch posts with type safety
+async function getPosts(): Promise<Post[]> {
   try {
-    const posts = await client.fetch(`
-      *[_type == "post"] | order(publishedAt desc) {
+    return await client.fetch(
+      `*[_type == "post"] | order(publishedAt desc) {
         _id,
         title,
         slug,
@@ -23,25 +42,23 @@ async function getPosts() {
           _id,
           title
         }
-      }
-    `);
-    return posts;
+      }`
+    );
   } catch (error) {
     console.error("Sanity Fetch Error:", error);
     return [];
   }
 }
 
-
-async function getCategories() {
+// ✅ Fetch categories with type safety
+async function getCategories(): Promise<Category[]> {
   try {
-    const categories = await client.fetch(`
-      *[_type == "category"]{
+    return await client.fetch(
+      `*[_type == "category"]{
         _id,
         title
-      }
-    `);
-    return categories;
+      }`
+    );
   } catch (error) {
     console.error("Sanity Fetch Error:", error);
     return [];
@@ -49,33 +66,35 @@ async function getCategories() {
 }
 
 export default function Home() {
-  const [posts, setPosts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [categorizedPosts, setCategorizedPosts] = useState({});
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categorizedPosts, setCategorizedPosts] = useState<CategorizedPosts>({});
+
+  // ✅ Optimized Fetching with useCallback
+  const fetchData = useCallback(async () => {
+    const fetchedPosts = await getPosts();
+    const fetchedCategories = await getCategories();
+
+    setPosts(fetchedPosts);
+    setCategories(fetchedCategories);
+
+    // ✅ Organize posts by category
+    const postsByCategory: CategorizedPosts = {};
+    fetchedPosts.forEach((post) => {
+      if (post.category?.title) {
+        if (!postsByCategory[post.category.title]) {
+          postsByCategory[post.category.title] = [];
+        }
+        postsByCategory[post.category.title].push(post);
+      }
+    });
+
+    setCategorizedPosts(postsByCategory);
+  }, []);
 
   useEffect(() => {
-    async function fetchData() {
-      const fetchedPosts = await getPosts();
-      const fetchedCategories = await getCategories();
-
-      setPosts(fetchedPosts);
-      setCategories(fetchedCategories);
-
-      // Organize posts by category
-      const postsByCategory = {};
-      fetchedPosts.forEach((post) => {
-        if (post.category?.title) {
-          if (!postsByCategory[post.category.title]) {
-            postsByCategory[post.category.title] = [];
-          }
-          postsByCategory[post.category.title].push(post);
-        }
-      });
-
-      setCategorizedPosts(postsByCategory);
-    }
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   return (
     <div className="bg-gray-100 min-h-screen">
@@ -101,7 +120,7 @@ export default function Home() {
           )}
         </div>
 
-   
+        {/* ✅ Latest Updates */}
         {posts.length > 2 && (
           <div className="bg-white p-4 rounded-lg shadow-lg mb-6 overflow-hidden">
             <h3 className="text-xl font-semibold border-b pb-2 text-red-600">
@@ -123,6 +142,7 @@ export default function Home() {
           </div>
         )}
 
+        {/* ✅ Main Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2 bg-white p-4 rounded-lg shadow-lg">
             {posts.length > 0 && (
@@ -173,6 +193,7 @@ export default function Home() {
       </div>
       <Content />
 
+      {/* ✅ Marquee Animation */}
       <style jsx>{`
         @keyframes marquee {
           from { transform: translateX(100%); }
