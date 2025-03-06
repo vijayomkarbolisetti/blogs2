@@ -1,16 +1,18 @@
 import { client } from "@/app/lib/sanity";
+import { notFound } from "next/navigation"; // Import for handling 404
+import { PortableText } from "@portabletext/react";
 
 interface PageProps {
   params: { slug: string };
 }
 
-// ✅ Fetch post data
+// ✅ Fetch post data on the server
 async function getPost(slug: string) {
   try {
     return await client.fetch(
       `*[_type == "post" && slug.current == $slug][0]{
         title,
-        publishedAt,
+        "formattedPublishedAt": publishedAt, // ✅ Fixes Date Hydration
         mainImage{ asset->{url} },
         body
       }`,
@@ -23,12 +25,11 @@ async function getPost(slug: string) {
 }
 
 // ✅ Server Component with Correct Types
-export default async function PostPage({ params }: PageProps) {
-  const post = await getPost(params.slug);
+export default async function PostPage({ params }: { params: { slug: string } }) {
+  if (!params?.slug) return notFound(); // ✅ Fix: Ensure params are valid
 
-  if (!post) {
-    return <div><h1>Post Not Found</h1></div>;
-  }
+  const post = await getPost(params.slug);
+  if (!post) return notFound(); // ✅ Fix: Ensure post exists before rendering
 
   return (
     <div>
@@ -36,17 +37,15 @@ export default async function PostPage({ params }: PageProps) {
       {post.mainImage?.asset?.url && (
         <img src={post.mainImage.asset.url} alt={post.title} width="800" />
       )}
-      <p>Published on: {new Date(post.publishedAt).toDateString()}</p>
+      <p>Published on: {post.formattedPublishedAt}</p> 
       <div>
-        {post.body?.map((block: any, index: number) => (
-          <p key={index}>{block?.children?.[0]?.text || ""}</p>
-        ))}
+        <PortableText value={post.body} />
       </div>
     </div>
   );
 }
 
-// ✅ Generate static paths (Important for pre-rendering)
+// ✅ Generate static paths (Fixes deployment errors)
 export async function generateStaticParams() {
   const slugs = await client.fetch(`*[_type == "post"]{ "slug": slug.current }`);
   return slugs.map((post: { slug: string }) => ({ slug: post.slug }));
