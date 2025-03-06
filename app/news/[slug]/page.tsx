@@ -174,7 +174,7 @@ export default function NewsPage() {
 
           {/* ✅ Social Media Sharing */}
           <div className="mt-6">
-            <SocialMediaShare postTitle={post.title} postUrl={`http://localhost:3000/news/${slug}`} />
+            <SocialMediaShare postTitle={post.title} postUrl={`https://blogs-vijayomkarbolisetti-vijayomkarbolisettis-projects.vercel.app/news/${slug}`} />
           </div>
         </div>
       </div>
