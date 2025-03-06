@@ -6,7 +6,18 @@ import Link from "next/link";
 import { client } from "@/app/lib/sanity";
 import Header from "@/app/components/Header";
 
-async function getCategoryPosts(category: string) { // ✅ Explicitly typed `category`
+// ✅ Define the structure of a Post (Fix TypeScript error)
+interface Post {
+  _id: string;
+  title: string;
+  slug: { current: string };
+  publishedAt: string;
+  mainImage?: { asset?: { url?: string } };
+  category?: { title: string };
+}
+
+// ✅ Explicitly typed `category` & return type
+async function getCategoryPosts(category: string): Promise<Post[]> {
   console.log("🚀 Fetching posts for category:", category);
 
   try {
@@ -39,7 +50,7 @@ async function getCategoryPosts(category: string) { // ✅ Explicitly typed `cat
 
     console.log("🛠 Running Query for Category ID:", categoryData._id);
 
-    const posts = await client.fetch(query, { categoryId: categoryData._id });
+    const posts: Post[] = await client.fetch(query, { categoryId: categoryData._id });
 
     console.log("✅ Fetched Posts for", category, ":", posts);
     return posts;
@@ -52,7 +63,7 @@ async function getCategoryPosts(category: string) { // ✅ Explicitly typed `cat
 export default function CategoryPage() {
   const params = useParams(); // ✅ Get params first
   const category = typeof params.category === "string" ? params.category : ""; // ✅ Ensure it's a string
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState<Post[]>([]); // ✅ Set type for `posts`
 
   useEffect(() => {
     console.log("📡 Received Category from URL:", category);
