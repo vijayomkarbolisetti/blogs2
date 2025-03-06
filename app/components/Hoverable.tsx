@@ -1,18 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { ChevronDown } from "lucide-react"; // Import dropdown icon
 
-const HoverableCategory = ({ category, categorizedPosts }) => {
+// ✅ Define Category & Post Types
+interface Category {
+  _id: string;
+  title: string;
+}
+
+interface Post {
+  _id: string;
+  title: string;
+  slug: { current: string };
+  mainImage?: { asset?: { url?: string } };
+}
+
+// ✅ Define Props Type
+interface HoverableCategoryProps {
+  category: Category;
+  categorizedPosts: Record<string, Post[]>; // ✅ Ensures correct type for categorizedPosts
+}
+
+const HoverableCategory: React.FC<HoverableCategoryProps> = ({ category, categorizedPosts }) => {
   const [hovered, setHovered] = useState(false);
-  const [position, setPosition] = useState(null);
+  const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
   if (!category || !category.title) {
     return null;
   }
 
-  const handleMouseEnter = (event) => {
+  // ✅ Use `useCallback` for optimized event handlers
+  const handleMouseEnter = useCallback((event: React.MouseEvent<HTMLSpanElement>) => {
     setHovered(true);
     const rect = event.currentTarget.getBoundingClientRect();
     setPosition({
@@ -20,15 +40,11 @@ const HoverableCategory = ({ category, categorizedPosts }) => {
       left: rect.left,
       width: rect.width,
     });
-  };
+  }, []);
 
-  const handleMouseLeave = () => {
-    setTimeout(() => {
-      if (!document.querySelector(".hover-card:hover")) {
-        setHovered(false);
-      }
-    }, 100);
-  };
+  const handleMouseLeave = useCallback(() => {
+    setHovered(false);
+  }, []);
 
   return (
     <div className="relative inline-block">
@@ -42,9 +58,10 @@ const HoverableCategory = ({ category, categorizedPosts }) => {
         {category.title}
         <ChevronDown size={16} className={`transition-transform ${hovered ? "rotate-180" : ""}`} />
       </span>
+
       {hovered && position && (
         <div
-          className="hover-card fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-4"
+          className="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-4"
           style={{
             top: `${position.top}px`,
             left: `${position.left}px`,
@@ -54,7 +71,7 @@ const HoverableCategory = ({ category, categorizedPosts }) => {
             whiteSpace: "nowrap",
           }}
           onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
+          onMouseLeave={handleMouseLeave} // ✅ Optimized event handling
         >
           <h3 className="text-xl font-semibold border-b pb-2 text-red-600 mb-3">
             📢 {category.title} - Latest Stories

@@ -6,7 +6,19 @@ import { client } from "../lib/sanity";
 import logo from "../../public/anveshana.png";
 import Image from "next/image";
 
-async function getCategoriesAndAuthors() {
+// ✅ Define Category & Author Type
+interface Category {
+  _id: string;
+  title: string;
+}
+
+interface Author {
+  _id: string;
+  name: string;
+}
+
+// ✅ Explicitly define return type of `getCategoriesAndAuthors()`
+async function getCategoriesAndAuthors(): Promise<{ categories: Category[]; authors: Author[] }> {
   try {
     const query = `
       {
@@ -17,12 +29,16 @@ async function getCategoriesAndAuthors() {
     return await client.fetch(query);
   } catch (error) {
     console.error("Sanity Fetch Error:", error);
-    return { categories: [], authors: [] };
+    return { categories: [], authors: [] }; // ✅ Ensure return type matches expected structure
   }
 }
 
 export default function Header() {
-  const [data, setData] = useState({ categories: [], authors: [] });
+  // ✅ Explicitly type state
+  const [data, setData] = useState<{ categories: Category[]; authors: Author[] }>({
+    categories: [],
+    authors: [],
+  });
 
   useEffect(() => {
     async function fetchData() {
@@ -35,17 +51,9 @@ export default function Header() {
   return (
     <header className="bg-white shadow-md h-16 flex items-center">
       <div className="container mx-auto flex flex-col md:flex-row items-center justify-between px-6">
-   
         <Link href="/" className="font-bold text-red-600 cursor-pointer">
-  <Image 
-    src={logo} 
-    alt="Anveshana" 
-  
-    className="h-32 w-auto" 
-  />
-</Link>
-
-
+          <Image src={logo} alt="Anveshana" className="h-32 w-auto" />
+        </Link>
 
         <nav className="md:mt-0">
           <ul className="flex gap-6 text-lg font-medium text-gray-700">

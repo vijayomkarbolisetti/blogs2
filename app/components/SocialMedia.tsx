@@ -1,11 +1,17 @@
 "use client";
 
-import { Facebook, Twitter, MessageCircle } from "lucide-react";
+import { Facebook, Twitter } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
 import whatsapp from "../../public/whatsapp.svg"; 
 
-const SocialMediaShare = ({ postTitle, postUrl }) => {
+
+interface SocialMediaShareProps {
+  postTitle: string;
+  postUrl: string;
+}
+
+const SocialMediaShare: React.FC<SocialMediaShareProps> = ({ postTitle, postUrl }) => {
   const [copied, setCopied] = useState(false);
 
   const encodedTitle = encodeURIComponent(postTitle);
@@ -32,12 +38,12 @@ const SocialMediaShare = ({ postTitle, postUrl }) => {
         <Image src={whatsapp} alt="WhatsApp" className="w-6 h-6" />
       </a>
 
-
+     
       <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700">
         <Facebook size={24} />
       </a>
 
-
+    
       <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-500">
         <Twitter size={24} />
       </a>

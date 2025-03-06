@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { PortableText } from "@portabletext/react";
 import { client } from "@/app/lib/sanity";
@@ -8,11 +8,32 @@ import Header from "@/app/components/Header";
 import Link from "next/link";
 import SocialMediaShare from "@/app/components/SocialMedia";
 
-async function getPost(slug) {
+// ✅ Define TypeScript Types
+interface Post {
+  title: string;
+  body?: any;
+  publishedAt: string;
+  mainImage?: { asset?: { url?: string } };
+  category?: { title?: string };
+  author?: {
+    name?: string;
+    bio?: string;
+    image?: { asset?: { url?: string } };
+  };
+}
+
+interface RelatedPost {
+  title: string;
+  slug: { current: string };
+  publishedAt: string;
+  mainImage?: { asset?: { url?: string } };
+}
+
+// ✅ Fetch single post data
+async function getPost(slug: string): Promise<Post | null> {
   try {
-    console.log("🔍 Original Slug:", slug);
-    const decodedSlug = decodeURIComponent(slug); // ✅ Fix: Decode slug before querying
-    console.log("✅ Decoded Slug:", decodedSlug);
+    console.log("🔍 Fetching post:", slug);
+    const decodedSlug = decodeURIComponent(slug);
 
     const post = await client.fetch(
       `*[_type == "post" && slug.current == $slug][0] {
@@ -33,20 +54,22 @@ async function getPost(slug) {
           }
         }
       }`,
-      { slug: decodedSlug } 
+      { slug: decodedSlug }
     );
 
-    console.log("✅ Fetched post data:", post);
-    return post;
+    return post || null;
   } catch (error) {
     console.error("❌ Sanity Fetch Error:", error);
     return null;
   }
 }
 
-async function getRelatedPosts(category, slug) {
+// ✅ Fetch related posts
+async function getRelatedPosts(category: string, slug: string): Promise<RelatedPost[]> {
   try {
-    const decodedSlug = decodeURIComponent(slug); // ✅ Decode slug
+    console.log("🔍 Fetching related posts for category:", category);
+    const decodedSlug = decodeURIComponent(slug);
+
     const relatedPosts = await client.fetch(
       `*[_type == "post" && category->title == $category && slug.current != $slug] | order(publishedAt desc) {
         title,
@@ -59,8 +82,7 @@ async function getRelatedPosts(category, slug) {
       { category, slug: decodedSlug }
     );
 
-    console.log("✅ Fetched related posts:", relatedPosts);
-    return relatedPosts;
+    return relatedPosts || [];
   } catch (error) {
     console.error("❌ Sanity Fetch Error:", error);
     return [];
@@ -68,30 +90,32 @@ async function getRelatedPosts(category, slug) {
 }
 
 export default function NewsPage() {
-  const { slug } = useParams();
-  const [post, setPost] = useState(null);
-  const [relatedPosts, setRelatedPosts] = useState([]);
+  const params = useParams();
+  const slug = typeof params.slug === "string" ? params.slug : ""; // ✅ Ensure `slug` is always a string
+  const [post, setPost] = useState<Post | null>(null);
+  const [relatedPosts, setRelatedPosts] = useState<RelatedPost[]>([]);
 
-  useEffect(() => {
-    if (!slug) return; 
+  // ✅ Optimized fetching function
+  const fetchData = useCallback(async () => {
+    if (!slug) return;
 
-    async function fetchData() {
-      const currentPost = await getPost(slug);
-      if (!currentPost) {
-        console.error("⚠️ No post found for slug:", slug);
-        return;
-      }
-
-      setPost(currentPost);
-
-      if (currentPost?.category?.title) {
-        const relatedPosts = await getRelatedPosts(currentPost.category.title, slug);
-        setRelatedPosts(relatedPosts);
-      }
+    const currentPost = await getPost(slug);
+    if (!currentPost) {
+      console.error("⚠️ No post found for slug:", slug);
+      return;
     }
 
-    fetchData();
+    setPost(currentPost);
+
+    if (currentPost.category?.title) {
+      const related = await getRelatedPosts(currentPost.category.title, slug);
+      setRelatedPosts(related);
+    }
   }, [slug]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   if (!post) {
     return <p className="text-center mt-10 text-gray-600">Loading...</p>;
@@ -102,12 +126,12 @@ export default function NewsPage() {
       <Header />
       <div className="container mx-auto px-4 md:px-10 lg:px-16 mt-8 flex justify-center">
         <div className="bg-white p-6 md:p-10 rounded-lg shadow-lg w-full max-w-3xl">
-      
+          {/* ✅ Post Title */}
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 text-center">
             {post.title || "Untitled Post"}
           </h1>
 
-       
+          {/* ✅ Published Date */}
           <p className="text-gray-500 text-sm text-left mt-2">
             Published on:{" "}
             <span className="font-medium">
@@ -115,16 +139,18 @@ export default function NewsPage() {
             </span>
           </p>
 
-        
-          <div className="mt-6 flex justify-center">
-            <img
-              src={post.mainImage?.asset?.url || "/placeholder.jpg"}
-              alt={post.title || "Post Image"}
-              className="w-96 h-52 object-cover rounded-md shadow-lg mx-auto"
-            />
-          </div>
+          {/* ✅ Post Image */}
+          {post.mainImage?.asset?.url && (
+            <div className="mt-6 flex justify-center">
+              <img
+                src={post.mainImage.asset.url}
+                alt={post.title || "Post Image"}
+                className="w-96 h-52 object-cover rounded-md shadow-lg mx-auto"
+              />
+            </div>
+          )}
 
-  
+          {/* ✅ Author Information */}
           {post.author && (
             <div className="flex items-center space-x-4 p-4 rounded-lg">
               <img
@@ -141,14 +167,12 @@ export default function NewsPage() {
             </div>
           )}
 
+          {/* ✅ Post Content */}
           <div className="mt-6 text-gray-700 leading-relaxed">
-            {post.body ? (
-              <PortableText value={post.body} />
-            ) : (
-              <p className="text-red-500">No content available.</p>
-            )}
+            {post.body ? <PortableText value={post.body} /> : <p className="text-red-500">No content available.</p>}
           </div>
 
+          {/* ✅ Social Media Sharing */}
           <div className="mt-6">
             <SocialMediaShare postTitle={post.title} postUrl={`http://localhost:3000/news/${slug}`} />
           </div>
