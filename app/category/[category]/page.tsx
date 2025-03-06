@@ -50,13 +50,14 @@ async function getCategoryPosts(category: string) { // ✅ Explicitly typed `cat
 }
 
 export default function CategoryPage() {
-  const { category } = useParams(); // ✅ `useParams()` can return `string | string[] | undefined`
+  const params = useParams(); // ✅ Get params first
+  const category = typeof params.category === "string" ? params.category : ""; // ✅ Ensure it's a string
   const [posts, setPosts] = useState([]);
 
   useEffect(() => {
     console.log("📡 Received Category from URL:", category);
 
-    if (!category || typeof category !== "string") {
+    if (!category) {
       console.log("❌ Invalid category parameter!");
       return;
     }
@@ -65,7 +66,7 @@ export default function CategoryPage() {
       const fetchedPosts = await getCategoryPosts(category);
       setPosts(fetchedPosts);
     }
-    
+
     fetchPosts();
   }, [category]);
 
@@ -76,7 +77,7 @@ export default function CategoryPage() {
       <Header />
       <div className="container mx-auto px-4 mt-6">
         <h1 className="text-3xl font-bold text-center text-black">
-          {category?.toUpperCase() || "Unknown"} News
+          {category ? category.toUpperCase() : "Unknown"} News
         </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
